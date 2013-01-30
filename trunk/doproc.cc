@@ -87,15 +87,19 @@ getBlockIdx(int instrCount,vector<int> BlockLeader)
 
 //Get the successor list for a given block
 set<int> 
-getSuccessor(Block temp_blc,hash_map<int,vector<char*> > BlcOutLabel,hash_map<char*,int> LabelInBlc)
+getSuccessor(Block temp_blc,int blcNum,hash_map<int,vector<char*> > BlcOutLabel,hash_map<char*,int> LabelInBlc)
 { 
   vector<char*> temp;
   temp=BlcOutLabel[temp_blc.blcIdx];//Check which label(s) outgoing 
   set<int> temp_succIdx;
   vector<char*>::iterator it;
   set<int>::iterator itt;
-
+  //If the block is the one immediately before exit block
+  if(temp_blc.blcIdx==blcNum-2){
+    temp_succIdx.insert(blcNum-1);
+  }
   it=temp_blc.instrName.begin();
+  //Scan the given block's instruction list, find the branch type
   for(it=temp_blc.instrName.begin();it!=temp_blc.instrName.end();it++){
     if(*it="BFALSE_OP"){
     //If BFALSE_OP in this block, automatically add the immediate following block as one of successors 
@@ -112,12 +116,21 @@ getSuccessor(Block temp_blc,hash_map<int,vector<char*> > BlcOutLabel,hash_map<ch
   for(it=temp.begin();it!=temp.end();it++){
     temp_succIdx.insert(LabelInBlc[*it]);
   }
-  
+  return temp_succIdx;
+
+  /*
   for(itt=temp_succIdx.begin();itt!=temp_succIdx.end();itt++){
    printf("%i ",*itt);
   }
    printf("\n");
+  */
 }
+
+/*
+set<int>
+getPredecessor(Block temp_blc,){
+}
+*/
 
 //Proccess a given procedure
 simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
@@ -303,7 +316,6 @@ simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
     for(it=OPR.begin();it!=OPR.end();it++){
       printf("%s\n",*it);
     }
-    //printSuccessor(2,BlcOutLabel,LabelInBlc);
 
     //find immediate dominators    
     printf("\n" );
