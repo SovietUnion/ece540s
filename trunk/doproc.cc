@@ -15,14 +15,6 @@ using namespace __gnu_cxx;
 // refer to the following link as a starting point if you are not familiar with them: 
 // http://www.sgi.com/tech/stl/Vector.html
 // http://www.sgi.com/tech/stl/hash_map.html 
-/*
-void 
-enter_labelOut(char* labelName, int blknum, hash_map<char*,int> &LabelOutBlc)
-{   
-    LabelOutBlc[labelName]=blknum;    
-    printf("LABEL: %s %i \n",labelName,LabelOutBlc[labelName]);
-}
-*/
 
 class Block{
  public:
@@ -37,15 +29,13 @@ int instrCount=-1;//Store the temporary number of instructions
 int blockCount=0;//Store the temporary number of blocks
 int instrNum; //Store the total number of instructions
 int blcNum;//Store the total number of blocks(including entry and exit ones)
-hash_map<char*,int> LabelOutBlc;//Record which label going out from which block(for checking block from label)
+hash_map<char*,set<int> > LabelOutBlc;//Record which label going out from which blocks(for checking blocks from label)
 hash_map<char*,int> LabelInBlc;//Record which label going to which block(for checking block from label)
 vector<char*> OPR;//Record the list of operand code
 vector<Block> blc; //Container of all block information;
 hash_map<int,vector<char*> > BlcOutLabel;//Record which label going out from with block(for checking label from block)
 hash_map<int,char*> BlcInLabel;////Record which label going to which block(for checking label from block)
 vector<int> BlockLeader;
-
-
 
 //Get the leader of each block
 void 
@@ -84,7 +74,7 @@ getBlockIdx(int instrCount,vector<int> BlockLeader)
    }
 }
 
-//Get the successor list for a given block
+//Get the successors list for a given block
 set<int> 
 getSuccessor(Block temp_blc,int blcNum,hash_map<int,vector<char*> > BlcOutLabel,hash_map<char*,int> LabelInBlc)
 { 
@@ -98,37 +88,33 @@ getSuccessor(Block temp_blc,int blcNum,hash_map<int,vector<char*> > BlcOutLabel,
     temp_succIdx.insert(blcNum-1);
   }
   
+   //If the block is not the exit block,insert the block immediately following the given block as successor;
+  if(temp_blc.blcIdx!=blcNum-1){
+  temp_succIdx.insert(temp_blc.blcIdx+1);
+  }  
+
+  //Insert the outgoing label's destination as successor
   for(it=temp.begin();it!=temp.end();it++){
     temp_succIdx.insert(LabelInBlc[*it]);
   }
-  //Insert the block immediately following the given block as successor;
-  temp_succIdx.insert(temp_blc.blcIdx+1);
+ 
   //Scan the given block's instruction list, find situation where the block immediately following the given block is not successor
   for(it=temp_blc.instrName.begin();it!=temp_blc.instrName.end();it++){
-    /*
-    if(*it=="BFALSE_OP"){
-    //If BFALSE_OP in this block, automatically add the immediate following block as one of successors 
-     temp_succIdx.insert(temp_blc.blcIdx+1);
-    }
-    */
     if(*it=="JMP_OP"){
      temp_succIdx.erase(temp_blc.blcIdx+1);
     }
-    /*
-    else if(*it=="MBR_OP"){
-    //If MBR_OP in this block, automatically add the immediate following block as one of successors 
-     temp_succIdx.insert()
-    }
-    */
   }
   //Check outgoing the outgoing label leave to which block(this block should be successor)
  
   return temp_succIdx;
 }
-
 /*
+//Get the predecessors list for a given block
 set<int>
-getPredecessor(Block temp_blc,){
+getPredecessor(Block temp_blc,hash_map<char*,set<int> > LabelOutBlc){
+  set<int> temp_predIdx;
+  temp_blc.blcIdx=
+  return temp_predIdx;
 }
 */
 
@@ -175,7 +161,7 @@ simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
         printf("blockNum:%i\n",getBlockIdx(instrCount,BlockLeader));
 
         //Record the source of outgoing label
-        LabelOutBlc[i->u.bj.target->name]=getBlockIdx(instrCount,BlockLeader);
+        LabelOutBlc[i->u.bj.target->name].insert(getBlockIdx(instrCount,BlockLeader));
         BlcOutLabel[getBlockIdx(instrCount,BlockLeader)].push_back(i->u.bj.target->name);
         printf("%s ","OUTGOING LABEL "); 
         vector<char*>::iterator it;
@@ -196,7 +182,7 @@ simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
         printf("blockNum:%i\n",getBlockIdx(instrCount,BlockLeader));
         
         //Record the source of outgoing label
-        LabelOutBlc[i->u.bj.target->name]=getBlockIdx(instrCount,BlockLeader);
+        LabelOutBlc[i->u.bj.target->name].insert(getBlockIdx(instrCount,BlockLeader));
         BlcOutLabel[getBlockIdx(instrCount,BlockLeader)].push_back(i->u.bj.target->name);
       
         printf("%s ","OUTGOING LABEL "); 
@@ -221,7 +207,7 @@ simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
         //Record the source of outgoing label(s)
         unsigned n, ntargets;
         for(n=0;n<ntargets-1;n++){
-        LabelOutBlc[i->u.mbr.targets[n]->name]=getBlockIdx(instrCount,BlockLeader);
+        LabelOutBlc[i->u.mbr.targets[n]->name].insert(getBlockIdx(instrCount,BlockLeader));
         BlcOutLabel[getBlockIdx(instrCount,BlockLeader)].push_back(i->u.mbr.targets[n]->name);
         }
    
@@ -276,9 +262,12 @@ simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
      
     }
     instrNum=instrCount+1;
+    //Print the total number of instructions
     printf("\ninstrNum:%i ",instrNum);
+    //Put an end to Blockleader list(put the number of total blocks as the final one)
     putBlockEnd(instrNum,BlockLeader);
     
+    //Print BlockLeader list
     for(int i=0;i<BlockLeader.size();i++){
     printf("%i ",BlockLeader[i]);
     }
@@ -298,29 +287,27 @@ simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
          temp_blc.predecessor.insert(blcNum-1);
       }
       else{
-
        int a=BlockLeader[i];//instruction index starts from blockleader   
        //record instruction index and instruction name for a block
        while(a!=BlockLeader[i+1]){
-       temp_blc.instrIdx.insert(a);
-       temp_blc.instrName.push_back(OPR[a]); 
-       printf("\na=%i",a);
-       a++;
+        temp_blc.instrIdx.insert(a);
+        temp_blc.instrName.push_back(OPR[a]); 
+        printf("\na=%i",a);
+        a++;
        }
       } 
       blc.push_back(temp_blc);
     }
 
     for(int i=0;i<blc.size();i++){
-    printf("\nblock ");
-    printf("%i",blc[i].blcIdx);
-    printf("\n\t%s%i","instrs ",blc[i].instrIdx.size());
-       set<int>::iterator ittt;
+     printf("\nblock ");
+     printf("%i",blc[i].blcIdx);
+     printf("\n\t%s%i","instrs ",blc[i].instrIdx.size());
+     set<int>::iterator ittt;
       //for(int j=0;j<blc[i].instrIdx.size();j++){
-      for(ittt=blc[i].instrIdx.begin();ittt!=blc[i].instrIdx.end();ittt++){
+     for(ittt=blc[i].instrIdx.begin();ittt!=blc[i].instrIdx.end();ittt++){
        printf(" %i",*ittt);
-      }
-     
+     }   
     }
     
     //Record successors 
@@ -336,8 +323,7 @@ simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
     }
     //Record predecessors
     
-    
-    
+
     //Print block leader list
     printf("\n");
     for(int k=0;k<BlockLeader.size();k++){
