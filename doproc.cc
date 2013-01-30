@@ -27,11 +27,11 @@ enter_labelOut(char* labelName, int blknum, hash_map<char*,int> &LabelOutBlc)
 class Block{
  public:
   int blcIdx;
-  vector<int> instrIdx;
+  set<int> instrIdx;
   vector<char*> instrName;
-  vector<int> successor;
-  vector<int> predecessor;
-}temp_blc;
+  set<int> successor;
+  set<int> predecessor;
+};
 
 int instrCount=-1;//Store the temporary number of instructions
 int blockCount=0;//Store the temporary number of blocks
@@ -39,7 +39,6 @@ int instrNum; //Store the total number of instructions
 int blcNum;//Store the total number of blocks(including entry and exit ones)
 hash_map<char*,int> LabelOutBlc;//Record which label going out from which block(for checking block from label)
 hash_map<char*,int> LabelInBlc;//Record which label going to which block(for checking block from label)
-vector<char*> temp_successor;
 vector<char*> OPR;//Record the list of operand code
 vector<Block> blc; //Container of all block information;
 hash_map<int,vector<char*> > BlcOutLabel;//Record which label going out from with block(for checking label from block)
@@ -98,32 +97,33 @@ getSuccessor(Block temp_blc,int blcNum,hash_map<int,vector<char*> > BlcOutLabel,
   if(temp_blc.blcIdx==blcNum-2){
     temp_succIdx.insert(blcNum-1);
   }
-  it=temp_blc.instrName.begin();
-  //Scan the given block's instruction list, find the branch type
+  
+  for(it=temp.begin();it!=temp.end();it++){
+    temp_succIdx.insert(LabelInBlc[*it]);
+  }
+  //Insert the block immediately following the given block as successor;
+  temp_succIdx.insert(temp_blc.blcIdx+1);
+  //Scan the given block's instruction list, find situation where the block immediately following the given block is not successor
   for(it=temp_blc.instrName.begin();it!=temp_blc.instrName.end();it++){
-    if(*it="BFALSE_OP"){
+    /*
+    if(*it=="BFALSE_OP"){
     //If BFALSE_OP in this block, automatically add the immediate following block as one of successors 
      temp_succIdx.insert(temp_blc.blcIdx+1);
     }
+    */
+    if(*it=="JMP_OP"){
+     temp_succIdx.erase(temp_blc.blcIdx+1);
+    }
     /*
-    else if(*it="MBR_OP"){
+    else if(*it=="MBR_OP"){
     //If MBR_OP in this block, automatically add the immediate following block as one of successors 
      temp_succIdx.insert()
     }
     */
   }
   //Check outgoing the outgoing label leave to which block(this block should be successor)
-  for(it=temp.begin();it!=temp.end();it++){
-    temp_succIdx.insert(LabelInBlc[*it]);
-  }
+ 
   return temp_succIdx;
-
-  /*
-  for(itt=temp_succIdx.begin();itt!=temp_succIdx.end();itt++){
-   printf("%i ",*itt);
-  }
-   printf("\n");
-  */
 }
 
 /*
@@ -176,9 +176,7 @@ simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
 
         //Record the source of outgoing label
         LabelOutBlc[i->u.bj.target->name]=getBlockIdx(instrCount,BlockLeader);
-        temp_successor.push_back(i->u.bj.target->name);
-        BlcOutLabel[getBlockIdx(instrCount,BlockLeader)]=temp_successor;
-        temp_successor.clear();
+        BlcOutLabel[getBlockIdx(instrCount,BlockLeader)].push_back(i->u.bj.target->name);
         printf("%s ","OUTGOING LABEL "); 
         vector<char*>::iterator it;
         for(it=BlcOutLabel[getBlockIdx(instrCount,BlockLeader)].begin();it!=BlcOutLabel[getBlockIdx(instrCount,BlockLeader)].end();it++){
@@ -199,9 +197,9 @@ simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
         
         //Record the source of outgoing label
         LabelOutBlc[i->u.bj.target->name]=getBlockIdx(instrCount,BlockLeader);
-        temp_successor.push_back(i->u.bj.target->name);
-        BlcOutLabel[getBlockIdx(instrCount,BlockLeader)]=temp_successor;
-        temp_successor.clear();
+  
+        BlcOutLabel[getBlockIdx(instrCount,BlockLeader)].push_back(i->u.bj.target->name);
+      
         printf("%s ","OUTGOING LABEL "); 
         vector<char*>::iterator it;
         for(it=BlcOutLabel[getBlockIdx(instrCount,BlockLeader)].begin();it!=BlcOutLabel[getBlockIdx(instrCount,BlockLeader)].end();it++){
@@ -272,51 +270,84 @@ simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
 	 i = i->next;
      
     }
-    putBlockEnd(instrNum,BlockLeader);
     instrNum=instrCount+1;
+    printf("\ninstrNum:%i ",instrNum);
+    putBlockEnd(instrNum,BlockLeader);
+    
+    for(int i=0;i<BlockLeader.size();i++){
+    printf("%i ",BlockLeader[i]);
+    }
+
     blcNum=BlockLeader.size();
+
     //Initialize Block class members
     for(int i=0;i<blcNum;i++){
+      Block temp_blc;
       temp_blc.blcIdx=i;
       //Entry block
       if(i==0){
-         temp_blc.successor.push_back(1);
+         temp_blc.successor.insert(1);
       }
       //Exit block
-      else if(i=blcNum-1){
-         temp_blc.predecessor.push_back(blcNum-1);
+      else if(i==blcNum-1){
+         temp_blc.predecessor.insert(blcNum-1);
       }
       else{
-       int a=BlockLeader[i];//instruction index starts from blockleader
-       
+
+       int a=BlockLeader[i];//instruction index starts from blockleader   
        //record instruction index and instruction name for a block
        while(a!=BlockLeader[i+1]){
-       temp_blc.instrIdx.push_back(a);
-       temp_blc.instrName.push_back(OPR[a]);
+       temp_blc.instrIdx.insert(a);
+       temp_blc.instrName.push_back(OPR[a]); 
+       printf("\na=%i",a);
        a++;
        }
       } 
       blc.push_back(temp_blc);
     }
-   
-    //Record successors 
+    //Print blocks
+    //vector<Block>::iterator ittt;
+    //for(ittt=blc.begin();ittt!=blc.end();ittt++){
+    for(int i=0;i<blc.size();i++){
+    printf("\nblock ");
+    printf("%i",blc[i].blcIdx);
+    printf("\n\t%s%i","instrs ",blc[i].instrIdx.size());
+       set<int>::iterator ittt;
+      //for(int j=0;j<blc[i].instrIdx.size();j++){
+      for(ittt=blc[i].instrIdx.begin();ittt!=blc[i].instrIdx.end();ittt++){
+       printf(" %i",*ittt);
+      }
+     
+    }
     
+    //Record successors 
+    set<int> succ;
+    for(int k=0;k<blcNum;k++){
+     succ=getSuccessor(blc[k],blcNum,BlcOutLabel,LabelInBlc);
+     set<int>::iterator iter;
+     printf("\nsuccessors blc[%i] %i",k,succ.size());
+     for(iter=succ.begin();iter!=succ.end();iter++){
+      printf(" %i",*iter);
+     }
+     printf("\n");
+    }
     //Record predecessors
     
-    //Print blocks
+    
     
     //Print block leader list
     printf("\n");
     for(int k=0;k<BlockLeader.size();k++){
     printf("\n%i",BlockLeader[k]);
     }
+    /*
     //Print Instruction Name list
     printf("\n");
     vector<char*>::iterator it;
     for(it=OPR.begin();it!=OPR.end();it++){
       printf("%s\n",*it);
     }
-
+    */
     //find immediate dominators    
     printf("\n" );
     return inlist;
