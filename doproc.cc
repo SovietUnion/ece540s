@@ -83,12 +83,8 @@ getSuccessor(Block temp_blc,int blcNum,hash_map<int,vector<char*> > BlcOutLabel,
   set<int> temp_succIdx;
   vector<char*>::iterator it;
   set<int>::iterator itt;
-  //If the block is the one immediately before exit block
-  if(temp_blc.blcIdx==blcNum-2){
-    temp_succIdx.insert(blcNum-1);
-  }
-  
-   //If the block is not the exit block,insert the block immediately following the given block as successor;
+
+  //If the block is not the exit block,insert the block immediately following the given block as successor;
   if(temp_blc.blcIdx!=blcNum-1){
   temp_succIdx.insert(temp_blc.blcIdx+1);
   }  
@@ -98,7 +94,7 @@ getSuccessor(Block temp_blc,int blcNum,hash_map<int,vector<char*> > BlcOutLabel,
     temp_succIdx.insert(LabelInBlc[*it]);
   }
  
-  //Scan the given block's instruction list, find situation where the block immediately following the given block is not successor
+  //If the block immediately following the given block is not successor,delete it.
   for(it=temp_blc.instrName.begin();it!=temp_blc.instrName.end();it++){
     if(*it=="JMP_OP"){
      temp_succIdx.erase(temp_blc.blcIdx+1);
@@ -108,16 +104,53 @@ getSuccessor(Block temp_blc,int blcNum,hash_map<int,vector<char*> > BlcOutLabel,
  
   return temp_succIdx;
 }
-/*
+
 //Get the predecessors list for a given block
 set<int>
-getPredecessor(Block temp_blc,hash_map<char*,set<int> > LabelOutBlc){
+getPredecessor(Block temp_blc,vector<set<int> > successors)
+{
   set<int> temp_predIdx;
-  temp_blc.blcIdx=
+  set<int>::iterator itt;
+  for(int i=0;i<successors.size();i++){
+   for(itt=successors[i].begin();itt!=successors[i].end();itt++){
+     if(temp_blc.blcIdx==*itt){
+      temp_predIdx.insert(i);
+     }
+   }
+  }
+  return temp_predIdx;
+}
+/*
+set<int>
+getPredecessor(Block temp_blc,Block ahead_blc,hash_map<char*,set<int> > LabelOutBlc,hash_map<int,char*> BlcInLabel){
+  set<int> temp_predIdx;
+  vector<char*>::iterator it;
+  set<int>::iterator itt;
+  char* temp_label;
+  temp_label=BlcInLabel[temp_blc.blcIdx];
+  
+  //Insert the incoming label's source block as predecessor
+  for(itt=LabelOutBlc[temp_label].begin();itt!=LabelOutBlc[temp_label].end();){
+    temp_predIdx.insert(*itt);
+    ++itt;
+  }
+  
+  //If the block is not the entry block,insert the block immediatelty ahead of the given block as a predecessor
+  if(temp_blc.blcIdx!=0){
+     temp_predIdx.insert(temp_blc.blcIdx-1);
+  }
+  
+  //If the block immediately ahead of the given block is not a successor,delete it(By judging if the one ahead has a "jmp").
+  
+  for(it=ahead_blc.instrName.begin();it!=ahead_blc.instrName.end();it++){
+     if(*it=="JMP_OP") {
+       temp_predIdx.erase(temp_blc.blcIdx-1);
+     }
+  }
+ 
   return temp_predIdx;
 }
 */
-
 //Proccess a given procedure
 simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
 {
@@ -132,31 +165,31 @@ simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
         getBlockLeader(i,instrCount,BlockLeader);
         switch (i->opcode){
         case LOAD_OP: {
-	OPR.push_back("LOAD_OP");
+        OPR.push_back("LOAD_OP");
         printf("%i",instrCount);
-	    break;
-	}
+            break;
+        }
 
-	case STR_OP: {
-	OPR.push_back("STR_OP"); 
+        case STR_OP: {
+        OPR.push_back("STR_OP"); 
         printf("%i",instrCount);   
-	    break;
-	}
+            break;
+        }
 
-	case MCPY_OP: {
-	OPR.push_back("MCPY_OP"); 
+        case MCPY_OP: {
+        OPR.push_back("MCPY_OP"); 
         printf("%i",instrCount);
-	    break;
-	}
+            break;
+        }
         
-	case LDC_OP: {
-	OPR.push_back("LDC_OP");
+        case LDC_OP: {
+        OPR.push_back("LDC_OP");
         printf("%i",instrCount);
-	    break;
-	}
+            break;
+        }
 
-	case JMP_OP: {
-	
+        case JMP_OP: {
+        
         OPR.push_back("JMP_OP");
         printf("blockNum:%i\n",getBlockIdx(instrCount,BlockLeader));
 
@@ -170,13 +203,13 @@ simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
         }
 
         printf("%i",instrCount);   
-	    break;
-	}
+            break;
+        }
 
-	case BTRUE_OP:{
+        case BTRUE_OP:{
         OPR.push_back("BTRUE_OP");
         printf("%i",instrCount);}
-	case BFALSE_OP: {
+        case BFALSE_OP: {
       
         OPR.push_back("BFALSE_OP");
         printf("blockNum:%i\n",getBlockIdx(instrCount,BlockLeader));
@@ -192,17 +225,17 @@ simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
         }
          
         printf("%i",instrCount); 
-	    break;
-	}
+            break;
+        }
 
-	case CALL_OP: {
-	OPR.push_back("CALL_OP");
+        case CALL_OP: {
+        OPR.push_back("CALL_OP");
         printf("%i",instrCount);  
-	    break;
-	}
+            break;
+        }
 
-	case MBR_OP: {
-	OPR.push_back("MBR_OP");
+        case MBR_OP: {
+        OPR.push_back("MBR_OP");
          
         //Record the source of outgoing label(s)
         unsigned n, ntargets;
@@ -212,10 +245,10 @@ simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
         }
    
         printf("%i",instrCount);   
-	    break;
-	}
+            break;
+        }
 
-	case LABEL_OP: {
+        case LABEL_OP: {
         OPR.push_back("LABEL_OP");
         //Record the destination of incoming label
         LabelInBlc[i->u.label.lab->name]=getBlockIdx(instrCount,BlockLeader);
@@ -225,40 +258,40 @@ simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
         printf("blockNum:%i\n",getBlockIdx(instrCount,BlockLeader));
 
         printf("%i",instrCount);
-	    break;
-	}
+            break;
+        }
 
-	case RET_OP: {
-	OPR.push_back("RET_OP");
+        case RET_OP: {
+        OPR.push_back("RET_OP");
         printf("%i",instrCount); 
-	    break;
-	}
+            break;
+        }
 
-	case CVT_OP:{
+        case CVT_OP:{
         OPR.push_back("CVT_OP");
         printf("%i",instrCount);}
-	case CPY_OP:{
+        case CPY_OP:{
         OPR.push_back("CPY_OP");
         printf("%i",instrCount);}
-	case NEG_OP:{
+        case NEG_OP:{
         OPR.push_back("NEG_OP");
         printf("%i",instrCount);}
-	case NOT_OP: {
+        case NOT_OP: {
         OPR.push_back("NOT_OP");
         printf("%i",instrCount);   
-	    break;
-	}
+            break;
+        }
         
-	default: {
+        default: {
         OPR.push_back("default");
         printf("%i",instrCount);
-	    /* binary base instructions */
+            /* binary base instructions */
          
-	}
+        }
        }
        
        fprint_instr(stdout, i);
-	 i = i->next;
+         i = i->next;
      
     }
     instrNum=instrCount+1;
@@ -298,7 +331,9 @@ simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
       } 
       blc.push_back(temp_blc);
     }
-
+    
+    /*
+    //Print instruction in each block
     for(int i=0;i<blc.size();i++){
      printf("\nblock ");
      printf("%i",blc[i].blcIdx);
@@ -309,26 +344,49 @@ simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
        printf(" %i",*ittt);
      }   
     }
-    
+    */
+
     //Record successors 
-    set<int> succ;
+    set<int> succ; 
+    vector<set<int> > successors;
     for(int k=0;k<blcNum;k++){
      succ=getSuccessor(blc[k],blcNum,BlcOutLabel,LabelInBlc);
+     successors.push_back(succ);
+     /*
      set<int>::iterator iter;
      printf("\nsuccessors blc[%i] %i",k,succ.size());
      for(iter=succ.begin();iter!=succ.end();iter++){
       printf(" %i",*iter);
      }
      printf("\n");
+     */ 
     }
-    //Record predecessors
-    
 
+    //Record predecessors
+    set<int> pred;
+    vector<set<int> > predecessors;
+    for(int k=0;k<blcNum;k++){
+     //pred=getPredecessor(blc[k],blc[k-1],LabelOutBlc,BlcInLabel);
+     pred=getPredecessor(blc[k],successors);
+     predecessors.push_back(pred);
+     /*
+     set<int>::iterator iter;
+     printf("\npredecessors blc[%i] %i",k,pred.size());
+     for(iter=pred.begin();iter!=pred.end();iter++){
+     printf(" %i",*iter);
+     }
+     printf("\n");
+     */
+    }
+
+    /*
     //Print block leader list
     printf("\n");
     for(int k=0;k<BlockLeader.size();k++){
     printf("\n%i",BlockLeader[k]);
     }
+    */
+
     /*
     //Print Instruction Name list
     printf("\n");
@@ -337,7 +395,39 @@ simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
       printf("%s\n",*it);
     }
     */
-    //find immediate dominators    
+
+
+    //************FOR FINAL RESULT************//
+    //Standard printout:
+  
+    for(int k=0;k<blcNum;k++){
+     //Instructions
+     printf("\nblock ");
+     printf("%i",blc[k].blcIdx);
+     printf("\n\t%s%i","instrs ",blc[k].instrIdx.size());
+     set<int>::iterator it;
+     for(it=blc[k].instrIdx.begin();it!=blc[k].instrIdx.end();it++){
+       printf(" %i",*it);
+     } 
+     //Successors
+     printf("\n\t%s%i","successors ",successors[k].size());
+     for(it=successors[k].begin();it!=successors[k].end();it++){
+     printf(" %i",*it);
+     }
+     //Predecessors
+     printf("\n\t%s%i","predecessors ",predecessors[k].size());
+     for(it=predecessors[k].begin();it!=predecessors[k].end();it++){
+     printf(" %i",*it);
+     }
+     printf("\n");
+    }
+    
+
+
+
+    //find immediate dominators
+    //Build a adjacency matrix for the control graph
+    
     printf("\n" );
     return inlist;
 }
