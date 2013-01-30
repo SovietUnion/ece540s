@@ -197,7 +197,6 @@ simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
         
         //Record the source of outgoing label
         LabelOutBlc[i->u.bj.target->name]=getBlockIdx(instrCount,BlockLeader);
-  
         BlcOutLabel[getBlockIdx(instrCount,BlockLeader)].push_back(i->u.bj.target->name);
       
         printf("%s ","OUTGOING LABEL "); 
@@ -218,8 +217,14 @@ simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
 
 	case MBR_OP: {
 	OPR.push_back("MBR_OP");
-        
-        
+         
+        //Record the source of outgoing label(s)
+        unsigned n, ntargets;
+        for(n=0;n<ntargets-1;n++){
+        LabelOutBlc[i->u.mbr.targets[n]->name]=getBlockIdx(instrCount,BlockLeader);
+        BlcOutLabel[getBlockIdx(instrCount,BlockLeader)].push_back(i->u.mbr.targets[n]->name);
+        }
+   
         printf("%i",instrCount);   
 	    break;
 	}
@@ -305,9 +310,7 @@ simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
       } 
       blc.push_back(temp_blc);
     }
-    //Print blocks
-    //vector<Block>::iterator ittt;
-    //for(ittt=blc.begin();ittt!=blc.end();ittt++){
+
     for(int i=0;i<blc.size();i++){
     printf("\nblock ");
     printf("%i",blc[i].blcIdx);
