@@ -5,7 +5,7 @@ extern "C" {
 }
 #include<hash_map>
 #include<vector>
-
+#include<set>
 
 
 
@@ -86,28 +86,32 @@ getBlockIdx(int instrCount,vector<int> BlockLeader)
 }
 
 //Get the successor list for a given block
-vector<int> 
-getSuccessor(int blockIdx,hash_map<int,vector<char*> > BlcOutLabel,hash_map<char*,int> LabelInBlc,vector<char*> OPR,vector<int> BlockLeader)
+set<int> 
+getSuccessor(Block temp_blc,hash_map<int,vector<char*> > BlcOutLabel,hash_map<char*,int> LabelInBlc)
 { 
   vector<char*> temp;
-  temp=BlcOutLabel[blockIdx];
-  vector<int> temp_succIdx;
+  temp=BlcOutLabel[temp_blc.blcIdx];//Check which label(s) outgoing 
+  set<int> temp_succIdx;
   vector<char*>::iterator it;
-  vector<int>::iterator itt;
-  //Check the OPR list to find the contents of this block
-  /* 
-  if() BlockLeader[blockIdx]
-  for(itt=OPR.begin();itt!=OPR.end()&&itt!=OPR.begin();itt++){
-    
+  set<int>::iterator itt;
+
+  it=temp_blc.instrName.begin();
+  for(it=temp_blc.instrName.begin();it!=temp_blc.instrName.end();it++){
+    if(*it="BFALSE_OP"){
+    //If BFALSE_OP in this block, automatically add the immediate following block as one of successors 
+     temp_succIdx.insert(temp_blc.blcIdx+1);
+    }
+    /*
+    else if(*it="MBR_OP"){
+    //If MBR_OP in this block, automatically add the immediate following block as one of successors 
+     temp_succIdx.insert()
+    }
+    */
   }
-  */
- 
+  //Check outgoing the outgoing label leave to which block(this block should be successor)
   for(it=temp.begin();it!=temp.end();it++){
-    temp_succIdx.push_back(LabelInBlc[*it]);
+    temp_succIdx.insert(LabelInBlc[*it]);
   }
-  
-  printf("\nsuccessors %i %i ",temp_succIdx.size()+1,blockIdx+1);
-  
   
   for(itt=temp_succIdx.begin();itt!=temp_succIdx.end();itt++){
    printf("%i ",*itt);
@@ -281,19 +285,13 @@ simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
       } 
       blc.push_back(temp_blc);
     }
-    /*
-    class Block{
-    int blcIdx;
-    vector<int> instrIdx;
-    vector<char*> instrName;
-    vector<int> successor;
-    vector<int> predecessor;
-    };  
-    */  
+   
     //Record successors 
     
     //Record predecessors
-
+    
+    //Print blocks
+    
     //Print block leader list
     printf("\n");
     for(int k=0;k<BlockLeader.size();k++){
