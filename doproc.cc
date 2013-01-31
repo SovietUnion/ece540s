@@ -1,20 +1,12 @@
 #include <stdio.h>
 extern "C" { 
 #include <simple.h>
-#include "print.h"
 }
 #include<hash_map>
 #include<vector>
 #include<set>
-
-
-
 using namespace std; 
 using namespace __gnu_cxx;
-// data structures you should consider using are vector and hash_map from the STL
-// refer to the following link as a starting point if you are not familiar with them: 
-// http://www.sgi.com/tech/stl/Vector.html
-// http://www.sgi.com/tech/stl/hash_map.html 
 
 class Block{
  public:
@@ -25,17 +17,6 @@ class Block{
   set<int> predecessor;
 };
 
-int instrCount=-1;//Store the temporary number of instructions
-int blockCount=0;//Store the temporary number of blocks
-int instrNum; //Store the total number of instructions
-int blcNum;//Store the total number of blocks(including entry and exit ones)
-hash_map<char*,set<int> > LabelOutBlc;//Record which label going out from which blocks(for checking blocks from label)
-hash_map<char*,int> LabelInBlc;//Record which label going to which block(for checking block from label)
-vector<char*> OPR;//Record the list of operand code
-vector<Block> blc; //Container of all block information;
-hash_map<int,vector<char*> > BlcOutLabel;//Record which label going out from with block(for checking label from block)
-hash_map<int,char*> BlcInLabel;////Record which label going to which block(for checking label from block)
-vector<int> BlockLeader;
 
 //Get the leader of each block
 void 
@@ -151,13 +132,25 @@ getPredecessor(Block temp_blc,Block ahead_blc,hash_map<char*,set<int> > LabelOut
   return temp_predIdx;
 }
 */
+
 //Proccess a given procedure
 simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
 {
     // build flow control graph 
+    int instrCount=-1;//Store the temporary number of instructions
+    int blockCount=0;//Store the temporary number of blocks
+    int instrNum; //Store the total number of instructions
+    int blcNum;//Store the total number of blocks(including entry and exit ones)
+    hash_map<char*,set<int> > LabelOutBlc;//Record which label going out from which blocks(for checking blocks from label)
+    hash_map<char*,int> LabelInBlc;//Record which label going to which block(for checking block from label)
+    vector<char*> OPR;//Record the list of operand code
+    vector<Block> blc; //Container of all block information;
+    hash_map<int,vector<char*> > BlcOutLabel;//Record which label going out from with block(for checking label from block)
+    hash_map<int,char*> BlcInLabel;////Record which label going to which block(for checking label from block)
+    vector<int> BlockLeader;
     simple_instr *i;
     BlockLeader.push_back(-1);//entry block
-    printf("\nProcedure %s:\n", proc_name);
+    printf("\ncfg %s", proc_name);
     
     i = inlist;
     while (i) {
@@ -165,77 +158,78 @@ simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
         getBlockLeader(i,instrCount,BlockLeader);
         switch (i->opcode){
         case LOAD_OP: {
-        OPR.push_back("LOAD_OP");
-        printf("%i",instrCount);
-            break;
-        }
+	OPR.push_back("LOAD_OP");
+      //  printf("%i",instrCount);
+	    break;
+	}
 
-        case STR_OP: {
-        OPR.push_back("STR_OP"); 
-        printf("%i",instrCount);   
-            break;
-        }
+	case STR_OP: {
+	OPR.push_back("STR_OP"); 
+      //  printf("%i",instrCount);   
+	    break;
+	}
 
-        case MCPY_OP: {
-        OPR.push_back("MCPY_OP"); 
-        printf("%i",instrCount);
-            break;
-        }
+	case MCPY_OP: {
+	OPR.push_back("MCPY_OP"); 
+     //   printf("%i",instrCount);
+	    break;
+	}
         
-        case LDC_OP: {
-        OPR.push_back("LDC_OP");
-        printf("%i",instrCount);
-            break;
-        }
+	case LDC_OP: {
+	OPR.push_back("LDC_OP");
+      //  printf("%i",instrCount);
+	    break;
+	}
 
-        case JMP_OP: {
-        
+	case JMP_OP: {
+	
         OPR.push_back("JMP_OP");
-        printf("blockNum:%i\n",getBlockIdx(instrCount,BlockLeader));
+       // printf("blockNum:%i\n",getBlockIdx(instrCount,BlockLeader));
 
         //Record the source of outgoing label
         LabelOutBlc[i->u.bj.target->name].insert(getBlockIdx(instrCount,BlockLeader));
         BlcOutLabel[getBlockIdx(instrCount,BlockLeader)].push_back(i->u.bj.target->name);
-        printf("%s ","OUTGOING LABEL "); 
+      //  printf("%s ","OUTGOING LABEL "); 
         vector<char*>::iterator it;
         for(it=BlcOutLabel[getBlockIdx(instrCount,BlockLeader)].begin();it!=BlcOutLabel[getBlockIdx(instrCount,BlockLeader)].end();it++){
-        printf("%s\n",*it);   
+      //  printf("%s\n",*it);   
         }
 
-        printf("%i",instrCount);   
-            break;
-        }
+      //  printf("%i",instrCount);   
+	    break;
+	}
 
-        case BTRUE_OP:{
+	case BTRUE_OP:{
         OPR.push_back("BTRUE_OP");
-        printf("%i",instrCount);}
-        case BFALSE_OP: {
+       // printf("%i",instrCount);
+        }
+	case BFALSE_OP: {
       
         OPR.push_back("BFALSE_OP");
-        printf("blockNum:%i\n",getBlockIdx(instrCount,BlockLeader));
+        //printf("blockNum:%i\n",getBlockIdx(instrCount,BlockLeader));
         
         //Record the source of outgoing label
         LabelOutBlc[i->u.bj.target->name].insert(getBlockIdx(instrCount,BlockLeader));
         BlcOutLabel[getBlockIdx(instrCount,BlockLeader)].push_back(i->u.bj.target->name);
-      
+       /*
         printf("%s ","OUTGOING LABEL "); 
         vector<char*>::iterator it;
         for(it=BlcOutLabel[getBlockIdx(instrCount,BlockLeader)].begin();it!=BlcOutLabel[getBlockIdx(instrCount,BlockLeader)].end();it++){
         printf("%s\n",*it);   
         }
-         
-        printf("%i",instrCount); 
-            break;
-        }
+        */
+    //    printf("%i",instrCount); 
+	    break;
+	}
 
-        case CALL_OP: {
-        OPR.push_back("CALL_OP");
-        printf("%i",instrCount);  
-            break;
-        }
+	case CALL_OP: {
+	OPR.push_back("CALL_OP");
+    //    printf("%i",instrCount);  
+	    break;
+	}
 
-        case MBR_OP: {
-        OPR.push_back("MBR_OP");
+	case MBR_OP: {
+	OPR.push_back("MBR_OP");
          
         //Record the source of outgoing label(s)
         unsigned n, ntargets;
@@ -244,67 +238,70 @@ simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
         BlcOutLabel[getBlockIdx(instrCount,BlockLeader)].push_back(i->u.mbr.targets[n]->name);
         }
    
-        printf("%i",instrCount);   
-            break;
-        }
+      //  printf("%i",instrCount);   
+	    break;
+	}
 
-        case LABEL_OP: {
+	case LABEL_OP: {
         OPR.push_back("LABEL_OP");
         //Record the destination of incoming label
         LabelInBlc[i->u.label.lab->name]=getBlockIdx(instrCount,BlockLeader);
         BlcInLabel[getBlockIdx(instrCount,BlockLeader)]=i->u.label.lab->name;
-        printf("%s ","Incoming LABEL "); 
-        printf("%s\n",BlcInLabel[getBlockIdx(instrCount,BlockLeader)]); 
-        printf("blockNum:%i\n",getBlockIdx(instrCount,BlockLeader));
+     //   printf("%s ","Incoming LABEL "); 
+     //   printf("%s\n",BlcInLabel[getBlockIdx(instrCount,BlockLeader)]); 
+     //   printf("blockNum:%i\n",getBlockIdx(instrCount,BlockLeader));
 
-        printf("%i",instrCount);
-            break;
-        }
+     //   printf("%i",instrCount);
+	    break;
+	}
 
-        case RET_OP: {
-        OPR.push_back("RET_OP");
-        printf("%i",instrCount); 
-            break;
-        }
+	case RET_OP: {
+	OPR.push_back("RET_OP");
+     //   printf("%i",instrCount); 
+	    break;
+	}
 
-        case CVT_OP:{
+	case CVT_OP:{
         OPR.push_back("CVT_OP");
-        printf("%i",instrCount);}
-        case CPY_OP:{
+       // printf("%i",instrCount);
+        }
+	case CPY_OP:{
         OPR.push_back("CPY_OP");
-        printf("%i",instrCount);}
-        case NEG_OP:{
+     //   printf("%i",instrCount)
+        }
+	case NEG_OP:{
         OPR.push_back("NEG_OP");
-        printf("%i",instrCount);}
-        case NOT_OP: {
+     //   printf("%i",instrCount);
+        }
+	case NOT_OP: {
         OPR.push_back("NOT_OP");
-        printf("%i",instrCount);   
-            break;
-        }
+      //  printf("%i",instrCount);   
+	    break;
+	}
         
-        default: {
+	default: {
         OPR.push_back("default");
-        printf("%i",instrCount);
-            /* binary base instructions */
+      //  printf("%i",instrCount);
+	    /* binary base instructions */
          
-        }
+	}
        }
        
-       fprint_instr(stdout, i);
-         i = i->next;
+      // fprint_instr(stdout, i);
+	 i = i->next;
      
     }
     instrNum=instrCount+1;
     //Print the total number of instructions
-    printf("\ninstrNum:%i ",instrNum);
+   // printf("\ninstrNum:%i ",instrNum);
     //Put an end to Blockleader list(put the number of total blocks as the final one)
     putBlockEnd(instrNum,BlockLeader);
-    
+    /*
     //Print BlockLeader list
     for(int i=0;i<BlockLeader.size();i++){
     printf("%i ",BlockLeader[i]);
     }
-
+    */
     blcNum=BlockLeader.size();
 
     //Initialize Block class members
@@ -317,7 +314,7 @@ simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
       }
       //Exit block
       else if(i==blcNum-1){
-         temp_blc.predecessor.insert(blcNum-1);
+       temp_blc.predecessor.insert(blcNum-1);
       }
       else{
        int a=BlockLeader[i];//instruction index starts from blockleader   
@@ -325,7 +322,6 @@ simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
        while(a!=BlockLeader[i+1]){
         temp_blc.instrIdx.insert(a);
         temp_blc.instrName.push_back(OPR[a]); 
-        printf("\na=%i",a);
         a++;
        }
       } 
@@ -399,10 +395,10 @@ simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
 
     //************FOR FINAL RESULT************//
     //Standard printout:
-  
+    printf(" %i\n",blcNum);
     for(int k=0;k<blcNum;k++){
      //Instructions
-     printf("\nblock ");
+     printf("block ");
      printf("%i",blc[k].blcIdx);
      printf("\n\t%s%i","instrs ",blc[k].instrIdx.size());
      set<int>::iterator it;
@@ -422,12 +418,22 @@ simple_instr* do_procedure (simple_instr *inlist, char *proc_name)
      printf("\n");
     }
     
-
-
-
-    //find immediate dominators
-    //Build a adjacency matrix for the control graph
-    
+    // find immediate dominators
+    // Build a adjacency matrix for the control graph
+    // successors
+    vector < vector<int> > CFGMatrix;
+    set<int>::iterator iter;
+    CFGMatrix.resize(blcNum, vector<int>(blcNum, 0));
+    /*
     printf("\n" );
+    for(int i=0;i<blcNum;i++){
+       for(iter=successors[i].begin();iter!=successors[i].end();iter++){
+        
+         CFGMatrix[i][*iter]=1;
+        
+       }
+       printf("\n");
+    }
+    */
     return inlist;
 }
